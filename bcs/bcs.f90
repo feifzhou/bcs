@@ -867,6 +867,8 @@ contains
        
        !Check for the presence of a holdout set; if we have one calculate the RMS and
        !absolute error for that too.
+       ! FZ comment: how about creating new variables hold_pi, hold_y for holdout data, and allocate hold_pi, hold_y
+       ! as well as sub_pi, sub_y outside the nfits loop, without having to allocate/free memory each time?
        deallocate(sub_pi, sub_y)
        if (allocated(holdlist) .and. (present(hold_err_) .or. present(hold_rms_))) then
           allocate(sub_pi(size(holdlist, 2), nbasis), sub_y(size(holdlist, 2)))
