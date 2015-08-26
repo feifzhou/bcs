@@ -457,6 +457,8 @@ contains
     character(len=*), intent(in) :: filename
     integer :: fileio, ioerr
     
+! Without defaulting to false, this function return true on Mac always using gfortran
+    file_exists = .FALSE.
     open(newunit(fileio), file=filename, status='old', iostat=ioerr)
     !If there wasn't an error, the file must exist, so the tracker has been enabled
     if (ioerr .eq. 0) then
@@ -676,7 +678,8 @@ contains
   !!system clock if unspecified.</parameter>
   subroutine do_bcs(full_pi, y, nfits, js, error_bars, fit_rms, fit_err, hold_rms_, hold_err_, &
                     nholdout_, sigma2_, eta_, jcutoff_, penaltyfxn_, reweight_, seed)
-    real(dp), allocatable, intent(in) :: full_pi(:,:), y(:)
+! removing the allocatable attributes allows easier external call of this subroutine
+    real(dp), intent(in) :: full_pi(:,:), y(:)
     integer :: nfits
     real(dp), intent(inout) :: js(nfits, size(full_pi, 2)), error_bars(nfits, size(full_pi, 2))
     real(dp), intent(inout) :: fit_rms(nfits), fit_err(nfits)
@@ -810,7 +813,7 @@ contains
     !The size of the arrays for making predictions don't change between fitting
     !iterations, so we can re-use them.
     allocate(fit_pred(nfitsets))
-    if (allocated(holdlist)) allocate(hold_pred(size(holdlist, 1)))
+    if (allocated(holdlist)) allocate(hold_pred(size(holdlist, 2)))
     
     do i=1, nfits
        !Because of the possible random selection of fitting sets and validation sets,
@@ -864,6 +867,7 @@ contains
        
        !Check for the presence of a holdout set; if we have one calculate the RMS and
        !absolute error for that too.
+       deallocate(sub_pi, sub_y)
        if (allocated(holdlist) .and. (present(hold_err_) .or. present(hold_rms_))) then
           allocate(sub_pi(size(holdlist, 2), nbasis), sub_y(size(holdlist, 2)))
           do j=1, size(holdlist, 2)
@@ -872,11 +876,11 @@ contains
           end do
           
           hold_pred(:) = (/ (dot_product(sub_pi(k,:), tjs(:)), k=1, size(holdlist, 2)) /)
-          if (present(hold_err_)) hold_err_(i) = sum(abs(fit_pred - sub_y))
-          if (present(hold_rms_)) hold_rms_(i) = sqrt(sum((fit_pred - sub_y)**2)/size(holdlist, 2))
+          if (present(hold_err_)) hold_err_(i) = sum(abs(hold_pred - sub_y))
+          if (present(hold_rms_)) hold_rms_(i) = sqrt(sum((hold_pred - sub_y)**2)/size(holdlist, 2))
           deallocate(sub_pi, sub_y)
        end if
-       deallocate(sub_pi, sub_y)
+!       deallocate(sub_pi, sub_y)
     end do
   end subroutine do_bcs
 end module bcs
